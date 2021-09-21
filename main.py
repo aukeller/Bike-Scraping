@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
-from pprint import pprint
+import csv
 
 # use requests to go to used bike page and get html content
 
@@ -9,30 +9,37 @@ response = requests.get(url)
 
 # parse html content to get details strictly related to road bikes -- price, name, size, type
 
-html_content = BeautifulSoup(response.content)
-gallery_items = html_content.find_all('dl')
+html_content = BeautifulSoup(response.content, features="html.parser")
 
-parsed_content = []
+# open csv file and write headers
+csv_file = open('bike_scrape.csv', 'w')
 
-for dl in gallery_items:
-  if dl.dd is not None:
-      descriptors = dl.dd.string.split('.')
+csv_writer = csv.writer(csv_file)
+csv_writer.writerow(['price', 'details', 'link'])
+
+for dl in html_content.find_all('dl'):
+  try:
+      descriptors = dl.dd.get_text(strip=True)
+
+      # formats strings 
+      descriptors = descriptors.replace('NEW', '')
+      descriptors = descriptors.replace('–', '')
+      descriptors = descriptors.split('.')
+      
       price = descriptors[0]
+      price = price.replace('$', '')
 
-      if '$' in price:
-        price = price[price.index('$'):]
       details = ''.join(descriptors[1:])
 
       link = dl.dt.a.get('href')
-      
-      
-      parsed_content.append({
-          'price': price,
-          'details': details,
-          'link': link
-      })
 
-pprint(parsed_content)
+      # writes row to csv file for each loop
+      csv_writer.writerow([price, details, link])
+
+  except:
+    descriptors = None
+
+csv_file.close()
 
       
 
